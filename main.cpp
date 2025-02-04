@@ -158,28 +158,148 @@ std::vector<Move> pawn_move_generation(int square, int turn) {
 }
 
 // Knight moves
-std::vector<Move> knight_move_generation(int square, int turn){
+std::vector<Move> knight_move_generation(int square, int turn) {
+    std::vector<Move> knight_moves;
 
+    // Knight offsets
+    const int knight_offsets[8] = { -17, -15, -10, -6, 6, 10, 15, 17 };
+
+    int row = square / 8;
+    int col = square % 8;
+
+    for (int i = 0; i < 8; i++) {
+        int new_square = square + knight_offsets[i];
+
+        // Ensure the move is within board bounds
+        if (new_square >= 0 && new_square < 64) {
+            int new_row = new_square / 8;
+            int new_col = new_square % 8;
+
+            // Ensure the move does not wrap around the board
+            if (abs(new_row - row) == 2 && abs(new_col - col) == 1 ||
+                abs(new_row - row) == 1 && abs(new_col - col) == 2) {
+
+                // Check if the destination square is empty or has an enemy piece
+                if (color[new_square] != turn) {
+                    knight_moves.push_back({square, new_square, E, false});
+                }
+            }
+        }
+    }
+
+    return knight_moves;
 }
+
 
 // Bishop moves
 std::vector<Move> bishop_move_generation(int square, int turn){
+    std::vector<Move> bishop_moves;
 
+    // Bishop offsets
+    const int bishop_offsets[4] = { -9, -7, 7, 9 };
+
+    int row = square / 8;
+    int col = square % 8;
+    for(int i = 0; i < 4; i++){
+        int new_square = square;
+        while(true){
+            new_square += bishop_offsets[i];
+            if(new_square < 0 || new_square >= 64) break;
+
+            // Ensure the move is within board bounds
+            int new_row = new_square / 8;
+            int new_col = new_square % 8;
+
+            // Add move if square is empty
+            if(piece[new_square] == E){
+                bishop_moves.push_back({square, new_square, E, false});
+            }
+            // Capture opponent's piece
+            else if(color[new_square] == -turn){
+                bishop_moves.push_back({square, new_square, E, false});
+                break;
+            }
+            // Friendly piece
+            else{
+                break;
+            }
+        }
+    }
+    return bishop_moves;
 }
 
 // Rook moves
 std::vector<Move> rook_move_generation(int square, int turn){
+    std::vector<Move> rook_moves;
 
+    // Rook offsets
+    const int rook_offsets[4] = { -8, 8, -1, 1 };
+
+    int row = square / 8;
+    int col = square % 8;
+
+    for(int i = 0; i < 4; i++){
+        int new_square = square;
+        while(true){
+            new_square += rook_offsets[i];
+            if(new_square < 0 || new_square >= 64) break;
+            int new_row = new_square / 8;
+            int new_col = new_square % 8;
+
+            // Check warpping
+            if((i == 2 || i == 3) && (new_row != row)) break;
+
+            // Add move if square is empty
+            if(piece[new_square] == E){
+                rook_moves.push_back({square, new_square, E, false});
+            }
+
+            // Capture opponent's piece
+            else if(color[new_square] == -turn){
+                rook_moves.push_back({square, new_square, E, false});
+                break;
+            }
+            // Friendly piece
+            else{
+                break;
+            }
+        }
+    }
+    return rook_moves;
 }
 
 // Queen moves
 std::vector<Move> queen_move_generation(int square, int turn){
-
+    bishop_move_generation(square, turn);
+    rook_move_generation(square, turn);
 }
 
 // King moves
 std::vector<Move> king_move_generation(int square, int turn){
+    std::vector<Move> king_moves;
 
+    // King offsets
+    const int king_offsets[8] = { -8, 8, -1, 1, -9, -7, 7, 9 };
+
+    int row = square / 8;
+    int col = square % 8;
+
+    for(int i = 0; i < 8; i++){
+        int new_square = square + king_offsets[i];
+        if(new_square < 0 || new_square >= 64) break;
+
+        int new_row = new_square / 8;
+        int new_col = new_square % 8;
+
+        // Wrapping
+        if((king_offsets[i] == -1 || king_offsets[i] == 1) && (abs(new_col - col) != 1)) continue;
+
+        // Empty square or square containing opponent's piece
+        if(color[new_square] != turn){
+            king_moves.pushback({square, new_square, E, false});
+        }
+    }
+    return king_moves;
 }
 
 int main(){
