@@ -15,6 +15,10 @@ const int w = 1;
 
 int en_passant_square = -1; // -1 = no en passant square
 
+// Castling check
+bool can_castle_kingside_w = true, can_castle_queenside_w = true;
+bool can_castle_kingside_b = true, can_castle_queenside_b = true;
+
 int piece[64]{
     R, N, B, Q, K, B, N, R,
     P, P, P, P, P, P, P, P,
@@ -44,7 +48,8 @@ struct Move{
     int start_square;
     int end_square;
     int promotion;
-    bool en_passant;
+    bool en_passan;
+    bool castling;
 };
 
 // pseudo-legal move generation
@@ -94,12 +99,12 @@ std::vector<Move> pawn_move_generation(int square, int turn) {
     int move_one_square = square + direction;
     if (move_one_square >= 0 && move_one_square < 64 && piece[move_one_square] == E) {
         if (move_one_square / 8 == promotion_rank) {
-            pawn_moves.push_back({square, move_one_square, Q, false});
-            pawn_moves.push_back({square, move_one_square, R, false});
-            pawn_moves.push_back({square, move_one_square, B, false});
-            pawn_moves.push_back({square, move_one_square, N, false});
+            pawn_moves.push_back({square, move_one_square, Q, false, false});
+            pawn_moves.push_back({square, move_one_square, R, false, false});
+            pawn_moves.push_back({square, move_one_square, B, false, false});
+            pawn_moves.push_back({square, move_one_square, N, false, false});
         } else {
-            pawn_moves.push_back({square, move_one_square, E, false});
+            pawn_moves.push_back({square, move_one_square, E, false, false});
 
             // Two-square forward move if on the starting rank and path is clear.
             if (row == start_rank) {
@@ -117,12 +122,12 @@ std::vector<Move> pawn_move_generation(int square, int turn) {
         // Regular capture.
         if (color[move_diag_left] == -turn) {
             if (move_diag_left / 8 == promotion_rank) {
-                pawn_moves.push_back({square, move_diag_left, Q, false});
-                pawn_moves.push_back({square, move_diag_left, R, false});
-                pawn_moves.push_back({square, move_diag_left, B, false});
-                pawn_moves.push_back({square, move_diag_left, N, false});
+                pawn_moves.push_back({square, move_diag_left, Q, false, false});
+                pawn_moves.push_back({square, move_diag_left, R, false, false});
+                pawn_moves.push_back({square, move_diag_left, B, false, false});
+                pawn_moves.push_back({square, move_diag_left, N, false, false});
             } else {
-                pawn_moves.push_back({square, move_diag_left, E, false});
+                pawn_moves.push_back({square, move_diag_left, E, false, false});
             }
         }
     }
@@ -132,29 +137,31 @@ std::vector<Move> pawn_move_generation(int square, int turn) {
     if (col < 7 && move_diag_right >= 0 && move_diag_right < 64) {
         if (color[move_diag_right] == -turn) {
             if (move_diag_right / 8 == promotion_rank) {
-                pawn_moves.push_back({square, move_diag_right, Q, false});
-                pawn_moves.push_back({square, move_diag_right, R, false});
-                pawn_moves.push_back({square, move_diag_right, B, false});
-                pawn_moves.push_back({square, move_diag_right, N, false});
+                pawn_moves.push_back({square, move_diag_right, Q, false, false});
+                pawn_moves.push_back({square, move_diag_right, R, false, false});
+                pawn_moves.push_back({square, move_diag_right, B, false, false});
+                pawn_moves.push_back({square, move_diag_right, N, false, false});
             } else {
-                pawn_moves.push_back({square, move_diag_right, E, false});
+                pawn_moves.push_back({square, move_diag_right, E, false, false});
             }
         }
     }
-
-    // En Passant:
-    // En passant capture is only possible when:
-    // - There is a valid en passant square (enpassantSquare != -1).
-    // - The pawn is on the correct row (row 3 for white, row 4 for black).
-    int enpassant_row = (turn == w) ? 3 : 4;
-    if (row == enpassant_row && enpassantSquare != -1) {
-        // If the en passant square is diagonally adjacent to the pawn.
-        if (enpassantSquare == square + direction - 1 || enpassantSquare == square + direction + 1) {
-            pawn_moves.push_back({square, enpassantSquare, E, true});
-        }
+    if (square / 8 == enpassant_row && en_passant_check(square, turn)) {
+        pawn_moves.push_back({square, en_passant_square, E, true, false});
     }
-
     return pawn_moves;
+}
+
+// Check en_passant
+bool en_passant_check(int square, int turn){
+    int left = square - 1;
+    int right = square + 1;
+    if (en_passant_square != -1 &&
+        ((left >= 0 && color[left] == -turn && piece[left] == P) ||
+         (right < 64 && color[right] == -turn && piece[right] == P))) {
+        return true;
+    }
+    return false;
 }
 
 // Knight moves
@@ -181,7 +188,7 @@ std::vector<Move> knight_move_generation(int square, int turn) {
 
                 // Check if the destination square is empty or has an enemy piece
                 if (color[new_square] != turn) {
-                    knight_moves.push_back({square, new_square, E, false});
+                    knight_moves.push_back({square, new_square, E, false, false});
                 }
             }
         }
@@ -212,11 +219,11 @@ std::vector<Move> bishop_move_generation(int square, int turn){
 
             // Add move if square is empty
             if(piece[new_square] == E){
-                bishop_moves.push_back({square, new_square, E, false});
+                bishop_moves.push_back({square, new_square, E, false, false});
             }
             // Capture opponent's piece
             else if(color[new_square] == -turn){
-                bishop_moves.push_back({square, new_square, E, false});
+                bishop_moves.push_back({square, new_square, E, false, false});
                 break;
             }
             // Friendly piece
@@ -251,12 +258,12 @@ std::vector<Move> rook_move_generation(int square, int turn){
 
             // Add move if square is empty
             if(piece[new_square] == E){
-                rook_moves.push_back({square, new_square, E, false});
+                rook_moves.push_back({square, new_square, E, false, false});
             }
 
             // Capture opponent's piece
             else if(color[new_square] == -turn){
-                rook_moves.push_back({square, new_square, E, false});
+                rook_moves.push_back({square, new_square, E, false, false});
                 break;
             }
             // Friendly piece
@@ -296,11 +303,25 @@ std::vector<Move> king_move_generation(int square, int turn){
 
         // Empty square or square containing opponent's piece
         if(color[new_square] != turn){
-            king_moves.pushback({square, new_square, E, false});
+            king_moves.pushback({square, new_square, E, false, false});
         }
     }
     return king_moves;
 }
+
+// Castling
+bool castling_check(int turn, bool kingside){
+    if(turn == w){
+        if(kingside && can_castle_kingside_w && piece[5] == E && piece[6] == E) return true;
+        if(!kingside && can_castle_queenside_w && piece[1] == E && piece[2] == E && piece[3] == E) return true;
+    }
+    else{
+        if(kingside && can_castle_kingside_b && piece[61] == E && piece[62] == E) return true;
+        if(!kingside && can_castle_queenside_b && piece[57] == E && piece[58] == E && piece[59] == E) return true;
+    }
+    return false;
+}
+
 
 int main(){
 
