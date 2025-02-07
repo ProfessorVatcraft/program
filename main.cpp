@@ -12,6 +12,8 @@ const int Empty = 0;
 const int White = 1;
 const int Black = -1;
 
+int en_passant[2] = {-1, -1};
+
 struct Piece{
     int piece = Empty;
     int color = 0;
@@ -25,39 +27,8 @@ struct Board{
                 board[i][j] = {Empty, 0};
             }
         }
-        board[0][0] = {Rook, Black};
-        board[0][1] = {Knight, Black};
-        board[0][2] = {Bishop, Black};
-        board[0][3] = {Queen, Black};
-        board[0][4] = {King, Black};
-        board[0][5] = {Bishop, Black};
-        board[0][6] = {Knight, Black};
-        board[0][7] = {Rook, Black};
-        board[1][0] = {Pawn, Black};
-        board[1][1] = {Pawn, Black};
-        board[1][2] = {Pawn, Black};
-        board[1][3] = {Pawn, Black};
-        board[1][4] = {Pawn, Black};
-        board[1][5] = {Pawn, Black};
-        board[1][6] = {Pawn, Black};
-        board[1][7] = {Pawn, Black};
-
-        board[6][0] = {Pawn, White};
-        board[6][1] = {Pawn, White};
-        board[6][2] = {Pawn, White};
-        board[6][3] = {Pawn, White};
-        board[6][4] = {Pawn, White};
-        board[6][5] = {Pawn, White};
-        board[6][6] = {Pawn, White};
-        board[6][7] = {Pawn, White};
-        board[7][0] = {Rook, White};
-        board[7][1] = {Knight, White};
-        board[7][2] = {Bishop, White};
-        board[7][3] = {Queen, White};
-        board[7][4] = {King, White};
-        board[7][5] = {Bishop, White};
-        board[7][6] = {Knight, White};
-        board[7][7] = {Rook, White};
+        board[6][7] = {Pawn, Black};
+        board[1][1] = {Pawn, White};
 
     }
 };
@@ -83,6 +54,8 @@ std::vector<Move> generate_pawn_moves(Board& b, int start_row, int start_col, in
             int two_square = end_row + direction;
             if(b.board[two_square][start_col].piece == Empty){
                 pawn_moves.push_back({start_row, start_col, two_square, start_col});
+                en_passant[0] = end_row;
+                en_passant[1] = start_col;
             }
         }
     }
@@ -95,6 +68,8 @@ std::vector<Move> generate_pawn_moves(Board& b, int start_row, int start_col, in
             pawn_moves.push_back({start_row, start_col, end_row, capture_right});
         }
     }
+
+    if()
     return pawn_moves;
 }
 
@@ -263,6 +238,21 @@ void make_move(Board& b, int start_row, int start_col, int end_row, int end_col,
                 b.board[end_row][end_col].color = b.board[start_row][start_col].color;
                 b.board[start_row][start_col].piece = Empty;
                 b.board[start_row][start_col].color = 0;
+
+                if(b.board[end_row][end_col].piece == Pawn && (end_row == 0 || end_row == 7)){
+                    int promoted_piece;
+                    std::cout << "Promote to Queen(9), Knight(3), Rook(5), Bishop(4): ";
+                    std::cin >> promoted_piece;
+                    if(promoted_piece == Knight || promoted_piece == Rook || promoted_piece == Bishop){
+                        b.board[end_row][end_col].piece = promoted_piece;
+                    }
+                    else{
+                        b.board[end_row][end_col].piece = Queen;
+                    }
+                }
+
+
+                break;
             }
         }
     }
