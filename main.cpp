@@ -1,328 +1,293 @@
 #include <iostream>
 #include <vector>
 
-/* Piece values, necessary constants and board representation using mail box */
-const int P = 1;
-const int N = 3;
-const int B = 4;
-const int R = 5;
-const int Q = 9;
-const int K = 100;
-const int E = 0;
+const int Pawn = 1;
+const int Knight = 3;
+const int Bishop = 4;
+const int Rook = 5;
+const int Queen = 9;
+const int King = 10;
+const int Empty = 0;
 
-const int b = -1;
-const int w = 1;
+const int White = 1;
+const int Black = -1;
 
-int en_passant_square = -1; // -1 = no en passant square
-
-// Castling check
-bool can_castle_kingside_w = true, can_castle_queenside_w = true;
-bool can_castle_kingside_b = true, can_castle_queenside_b = true;
-
-int piece[64]{
-    R, N, B, Q, K, B, N, R,
-    P, P, P, P, P, P, P, P,
-    E, E, E, E, E, E, E, E,
-    E, E, E, E, E, E, E, E,
-    E, E, E, E, E, E, E, E,
-    E, E, E, E, E, E, E, E,
-    P, P, P, P, P, P, P, P,
-    R, N, B, Q, K, B, N, R
+struct Piece{
+    int piece = Empty;
+    int color = 0;
 };
 
-int color[64]{
-    b, b, b, b, b, b, b, b,
-    b, b, b, b, b, b, b, b,
-    E, E, E, E, E, E, E, E,
-    E, E, E, E, E, E, E, E,
-    E, E, E, E, E, E, E, E,
-    E, E, E, E, E, E, E, E,
-    w, w, w, w, w, w, w, w,
-    w, w, w, w, w, w, w, w
-};
-
-/* Move generation */
-
-// Move structure
-struct Move{
-    int start_square;
-    int end_square;
-    int promotion;
-    bool en_passan;
-    bool castling;
-};
-
-// pseudo-legal move generation
-std::vector<Move> pseudo_legal_move_generation (int turn) {
-    std::vector<Move> pseudo_legal_move_list;
-    for (int i = 0; i < 64; i++) {
-        if (color[i] == turn) {
-            std::vector<Move> moves;
-            if (piece[i] == P) {
-                moves = pawn_move_generation(i, turn);
+struct Board{
+    Piece board[8][8];
+    Board(){
+        for(int i = 0; i < 8; i++){
+            for(int j = 0; j < 8; j++){
+                board[i][j] = {Empty, 0};
             }
-            else if (piece[i] == N) {
-                moves = knight_move_generation(i, turn);
-            }
-            else if (piece[i] == B) {
-                moves = bishop_move_generation(i, turn);
-            }
-            else if (piece[i] == R) {
-                moves = rook_move_generation(i, turn);
-            }
-            else if (piece[i] == Q) {
-                moves = queen_move_generation(i, turn);
-            }
-            else if (piece[i] == K) {
-                moves = king_move_generation(i, turn);
-            }
-            pseudo_legal_move_list.insert(pseudo_legal_move_list.end(), moves.begin(), moves.end());
         }
+        board[0][0] = {Rook, Black};
+        board[0][1] = {Knight, Black};
+        board[0][2] = {Bishop, Black};
+        board[0][3] = {Queen, Black};
+        board[0][4] = {King, Black};
+        board[0][5] = {Bishop, Black};
+        board[0][6] = {Knight, Black};
+        board[0][7] = {Rook, Black};
+        board[1][0] = {Pawn, Black};
+        board[1][1] = {Pawn, Black};
+        board[1][2] = {Pawn, Black};
+        board[1][3] = {Pawn, Black};
+        board[1][4] = {Pawn, Black};
+        board[1][5] = {Pawn, Black};
+        board[1][6] = {Pawn, Black};
+        board[1][7] = {Pawn, Black};
+
+        board[6][0] = {Pawn, White};
+        board[6][1] = {Pawn, White};
+        board[6][2] = {Pawn, White};
+        board[6][3] = {Pawn, White};
+        board[6][4] = {Pawn, White};
+        board[6][5] = {Pawn, White};
+        board[6][6] = {Pawn, White};
+        board[6][7] = {Pawn, White};
+        board[7][0] = {Rook, White};
+        board[7][1] = {Knight, White};
+        board[7][2] = {Bishop, White};
+        board[7][3] = {Queen, White};
+        board[7][4] = {King, White};
+        board[7][5] = {Bishop, White};
+        board[7][6] = {Knight, White};
+        board[7][7] = {Rook, White};
+
     }
-    return pseudo_legal_move_list;
-}
+};
 
-// Helper functions for pseudo_legal_move_generation function (piece movement functions)
+struct Move{
+    int start_row;
+    int start_col;
+    int end_row;
+    int end_col;
+};
 
-// Pawn moves
-std::vector<Move> pawn_move_generation(int square, int turn) {
+std::vector<Move> generate_pawn_moves(Board& b, int start_row, int start_col, int turn){
     std::vector<Move> pawn_moves;
 
-    int direction = (turn == w) ? -8 : 8;
-    int start_rank = (turn == w) ? 6 : 1;
-    int promotion_rank = (turn == w) ? 0 : 7;
+    int direction = (turn == White) ? -1 : 1;
+    int end_row = start_row + direction;
+    int capture_left = start_col - 1;
+    int capture_right = start_col + 1;
 
-    int row = square / 8;
-    int col = square % 8;
-
-    // One-square forward move.
-    int move_one_square = square + direction;
-    if (move_one_square >= 0 && move_one_square < 64 && piece[move_one_square] == E) {
-        if (move_one_square / 8 == promotion_rank) {
-            pawn_moves.push_back({square, move_one_square, Q, false, false});
-            pawn_moves.push_back({square, move_one_square, R, false, false});
-            pawn_moves.push_back({square, move_one_square, B, false, false});
-            pawn_moves.push_back({square, move_one_square, N, false, false});
-        } else {
-            pawn_moves.push_back({square, move_one_square, E, false, false});
-
-            // Two-square forward move if on the starting rank and path is clear.
-            if (row == start_rank) {
-                int move_two_square = square + 2 * direction;
-                if (move_two_square >= 0 && move_two_square < 64 && piece[move_two_square] == E) {
-                    pawn_moves.push_back({square, move_two_square, E, false});
-                }
+    if((end_row >= 0 && end_row < 8) && b.board[end_row][start_col].piece == Empty){
+        pawn_moves.push_back({start_row, start_col, end_row, start_col});
+        if((start_row == 1 && turn == Black) || (start_row == 6 && turn == White)){
+            int two_square = end_row + direction;
+            if(b.board[two_square][start_col].piece == Empty){
+                pawn_moves.push_back({start_row, start_col, two_square, start_col});
             }
         }
     }
 
-    // Diagonal capture left.
-    int move_diag_left = square + direction - 1;
-    if (col > 0 && move_diag_left >= 0 && move_diag_left < 64) {
-        // Regular capture.
-        if (color[move_diag_left] == -turn) {
-            if (move_diag_left / 8 == promotion_rank) {
-                pawn_moves.push_back({square, move_diag_left, Q, false, false});
-                pawn_moves.push_back({square, move_diag_left, R, false, false});
-                pawn_moves.push_back({square, move_diag_left, B, false, false});
-                pawn_moves.push_back({square, move_diag_left, N, false, false});
-            } else {
-                pawn_moves.push_back({square, move_diag_left, E, false, false});
-            }
+    if(end_row >=0 && end_row < 8){
+        if(capture_left >= 0 && b.board[end_row][capture_left].color == -turn){
+            pawn_moves.push_back({start_row, start_col, end_row, capture_left});
         }
-    }
-
-    // Diagonal capture right.
-    int move_diag_right = square + direction + 1;
-    if (col < 7 && move_diag_right >= 0 && move_diag_right < 64) {
-        if (color[move_diag_right] == -turn) {
-            if (move_diag_right / 8 == promotion_rank) {
-                pawn_moves.push_back({square, move_diag_right, Q, false, false});
-                pawn_moves.push_back({square, move_diag_right, R, false, false});
-                pawn_moves.push_back({square, move_diag_right, B, false, false});
-                pawn_moves.push_back({square, move_diag_right, N, false, false});
-            } else {
-                pawn_moves.push_back({square, move_diag_right, E, false, false});
-            }
+        if(capture_right < 8 && b.board[end_row][capture_right].color == -turn){
+            pawn_moves.push_back({start_row, start_col, end_row, capture_right});
         }
-    }
-    if (square / 8 == enpassant_row && en_passant_check(square, turn)) {
-        pawn_moves.push_back({square, en_passant_square, E, true, false});
     }
     return pawn_moves;
 }
 
-// Check en_passant
-bool en_passant_check(int square, int turn){
-    int left = square - 1;
-    int right = square + 1;
-    if (en_passant_square != -1 &&
-        ((left >= 0 && color[left] == -turn && piece[left] == P) ||
-         (right < 64 && color[right] == -turn && piece[right] == P))) {
-        return true;
-    }
-    return false;
-}
-
-// Knight moves
-std::vector<Move> knight_move_generation(int square, int turn) {
+std::vector<Move> generate_knight_moves(Board& b, int start_row, int start_col, int turn){
     std::vector<Move> knight_moves;
 
-    // Knight offsets
-    const int knight_offsets[8] = { -17, -15, -10, -6, 6, 10, 15, 17 };
+    int knight_row_offsets[8] = {-2, -2, -1, 1, 2, 2, -1, 1};
+    int knight_col_offsets[8] = {-1, 1, 2, 2, -1, 1, -2, -2};
 
-    int row = square / 8;
-    int col = square % 8;
-
-    for (int i = 0; i < 8; i++) {
-        int new_square = square + knight_offsets[i];
-
-        // Ensure the move is within board bounds
-        if (new_square >= 0 && new_square < 64) {
-            int new_row = new_square / 8;
-            int new_col = new_square % 8;
-
-            // Ensure the move does not wrap around the board
-            if (abs(new_row - row) == 2 && abs(new_col - col) == 1 ||
-                abs(new_row - row) == 1 && abs(new_col - col) == 2) {
-
-                // Check if the destination square is empty or has an enemy piece
-                if (color[new_square] != turn) {
-                    knight_moves.push_back({square, new_square, E, false, false});
-                }
+    for(int i = 0; i < 8; i++){
+        int end_row = start_row + knight_row_offsets[i];
+        int end_col = start_col + knight_col_offsets[i];
+        if((end_row >= 0 && end_row < 8) && (end_col >= 0 && end_col < 8)){
+            if(b.board[end_row][end_col].color != turn){
+                knight_moves.push_back({start_row, start_col, end_row, end_col});
             }
         }
     }
-
     return knight_moves;
 }
 
-
-// Bishop moves
-std::vector<Move> bishop_move_generation(int square, int turn){
+std::vector<Move> generate_bishop_moves(Board& b, int start_row, int start_col, int turn){
     std::vector<Move> bishop_moves;
 
-    // Bishop offsets
-    const int bishop_offsets[4] = { -9, -7, 7, 9 };
+    int bishop_right_diag_offsets[4] = {-1, -1, 1, 1};
+    int bishop_left_diag_offsets[4] = {-1, 1, -1, 1};
 
-    int row = square / 8;
-    int col = square % 8;
     for(int i = 0; i < 4; i++){
-        int new_square = square;
-        while(true){
-            new_square += bishop_offsets[i];
-            if(new_square < 0 || new_square >= 64) break;
-
-            // Ensure the move is within board bounds
-            int new_row = new_square / 8;
-            int new_col = new_square % 8;
-
-            // Add move if square is empty
-            if(piece[new_square] == E){
-                bishop_moves.push_back({square, new_square, E, false, false});
-            }
-            // Capture opponent's piece
-            else if(color[new_square] == -turn){
-                bishop_moves.push_back({square, new_square, E, false, false});
+        int end_row = start_row + bishop_left_diag_offsets[i];
+        int end_col = start_col + bishop_right_diag_offsets[i];
+        while((end_row >= 0 && end_row < 8) && (end_col >= 0 && end_col < 8)){
+            if(b.board[end_row][end_col].color == turn){
                 break;
             }
-            // Friendly piece
-            else{
+            bishop_moves.push_back({start_row, start_col, end_row, end_col});
+            if(b.board[end_row][end_col].color == -turn){
                 break;
             }
+            end_row += bishop_left_diag_offsets[i];
+            end_col += bishop_right_diag_offsets[i];
         }
     }
     return bishop_moves;
 }
 
-// Rook moves
-std::vector<Move> rook_move_generation(int square, int turn){
+std::vector<Move> generate_rook_moves(Board& b, int start_row, int start_col, int turn){
     std::vector<Move> rook_moves;
 
-    // Rook offsets
-    const int rook_offsets[4] = { -8, 8, -1, 1 };
-
-    int row = square / 8;
-    int col = square % 8;
+    int rook_row_offsets[4] = {0, -1, 1, 0};
+    int rook_col_offsets[4] = {-1,0, 0, 1};
 
     for(int i = 0; i < 4; i++){
-        int new_square = square;
-        while(true){
-            new_square += rook_offsets[i];
-            if(new_square < 0 || new_square >= 64) break;
-            int new_row = new_square / 8;
-            int new_col = new_square % 8;
-
-            // Check warpping
-            if((i == 2 || i == 3) && (new_row != row)) break;
-
-            // Add move if square is empty
-            if(piece[new_square] == E){
-                rook_moves.push_back({square, new_square, E, false, false});
-            }
-
-            // Capture opponent's piece
-            else if(color[new_square] == -turn){
-                rook_moves.push_back({square, new_square, E, false, false});
+        int end_row = start_row + rook_row_offsets[i];
+        int end_col = start_col + rook_col_offsets[i];
+        while((end_row >= 0 && end_row < 8) && (end_col >= 0 && end_col < 8)){
+            if(b.board[end_row][end_col].color == turn){
                 break;
             }
-            // Friendly piece
-            else{
+            rook_moves.push_back({start_row, start_col, end_row, end_col});
+            if(b.board[end_row][end_col].color == -turn){
                 break;
             }
+            end_row += rook_row_offsets[i];
+            end_col += rook_col_offsets[i];
         }
     }
     return rook_moves;
 }
 
-// Queen moves
-std::vector<Move> queen_move_generation(int square, int turn){
-    bishop_move_generation(square, turn);
-    rook_move_generation(square, turn);
+std::vector<Move> generate_queen_moves(Board& b, int start_row, int start_col, int turn){
+    std::vector<Move> queen_diag_moves = generate_bishop_moves(b, start_row, start_col, turn);
+    std::vector<Move> queen_hor_moves = generate_rook_moves(b, start_row, start_col, turn);
+    std::vector<Move> queen_moves;
+    queen_moves.insert(queen_moves.end(), queen_diag_moves.begin(), queen_diag_moves.end());
+    queen_moves.insert(queen_moves.end(), queen_hor_moves.begin(), queen_hor_moves.end());
+    return queen_moves;
 }
 
-// King moves
-std::vector<Move> king_move_generation(int square, int turn){
+std::vector<Move> generate_king_moves(Board& b, int start_row, int start_col, int turn){
     std::vector<Move> king_moves;
 
-    // King offsets
-    const int king_offsets[8] = { -8, 8, -1, 1, -9, -7, 7, 9 };
+    int king_first_offsets[8] = {-1, -1, -1, 0, 0, 1, 1, 1};
+    int king_second_offsets[8] = {-1, 0, 1, -1, 1, -1, 0, 1};
 
-    int row = square / 8;
-    int col = square % 8;
+    for(int i = 0 ; i < 8 ; i++){
+        int end_row = start_row + king_first_offsets[i];
+        int end_col = start_col + king_second_offsets[i];
 
-    for(int i = 0; i < 8; i++){
-        int new_square = square + king_offsets[i];
-        if(new_square < 0 || new_square >= 64) break;
-
-        int new_row = new_square / 8;
-        int new_col = new_square % 8;
-
-        // Wrapping
-        if((king_offsets[i] == -1 || king_offsets[i] == 1) && (abs(new_col - col) != 1)) continue;
-
-        // Empty square or square containing opponent's piece
-        if(color[new_square] != turn){
-            king_moves.pushback({square, new_square, E, false, false});
+        if((end_row >= 0 && end_row < 8) && (end_col >= 0 && end_col < 8)){
+            if(b.board[end_row][end_col].color != turn){
+                king_moves.push_back({start_row, start_col, end_row, end_col});
+            }
         }
     }
     return king_moves;
 }
 
-// Castling
-bool castling_check(int turn, bool kingside){
-    if(turn == w){
-        if(kingside && can_castle_kingside_w && piece[5] == E && piece[6] == E) return true;
-        if(!kingside && can_castle_queenside_w && piece[1] == E && piece[2] == E && piece[3] == E) return true;
+std::vector<Move> generate_moves(Board& b, int turn){
+    std::vector<Move> possible_moves;
+
+    for(int i = 0; i < 8; i++){
+        for(int j = 0; j < 8; j++){
+            if(b.board[i][j].color == turn){
+                if(b.board[i][j].piece == Pawn){
+                    std::vector<Move> pawn_moves = generate_pawn_moves(b, i, j, turn);
+                    possible_moves.insert(possible_moves.end(), pawn_moves.begin(), pawn_moves.end());
+                }
+                else if(b.board[i][j].piece == Knight){
+                    std::vector<Move> knight_moves = generate_knight_moves(b, i, j, turn);
+                    possible_moves.insert(possible_moves.end(), knight_moves.begin(), knight_moves.end());
+                }
+                else if(b.board[i][j].piece == Bishop){
+                    std::vector<Move> bishop_moves = generate_bishop_moves(b, i, j, turn);
+                    possible_moves.insert(possible_moves.end(), bishop_moves.begin(), bishop_moves.end());
+
+                }
+                else if(b.board[i][j].piece == Rook){
+                    std::vector<Move> rook_moves = generate_rook_moves(b, i, j, turn);
+                    possible_moves.insert(possible_moves.end(), rook_moves.begin(), rook_moves.end());
+
+                }
+                else if(b.board[i][j].piece == Queen){
+                    std::vector<Move> queen_moves = generate_queen_moves(b, i, j, turn);
+                    possible_moves.insert(possible_moves.end(), queen_moves.begin(), queen_moves.end());
+                }
+                else if(b.board[i][j].piece == King){
+                    std::vector<Move> king_moves = generate_king_moves(b, i, j, turn);
+                    possible_moves.insert(possible_moves.end(), king_moves.begin(), king_moves.end());
+                }
+            }
+        }
     }
-    else{
-        if(kingside && can_castle_kingside_b && piece[61] == E && piece[62] == E) return true;
-        if(!kingside && can_castle_queenside_b && piece[57] == E && piece[58] == E && piece[59] == E) return true;
-    }
-    return false;
+    return possible_moves;
 }
 
+void print_board(Board& b){
+    std::cout << "  0  1  2  3  4  5  6  7" << std::endl;
+    for(int i = 0; i < 8; i++){
+        std::cout << i << ' ';
+        for(int j = 0; j < 8; j++){
+            if(b.board[i][j].piece == Empty){
+                std::cout << ".  ";
+            }
+            else{
+                char color = (b.board[i][j].color == White) ? 'w' : 'b';
+                std::cout << color;
+                if(b.board[i][j].piece == Pawn) std::cout << 'P';
+                else if(b.board[i][j].piece == Knight) std::cout << 'N';
+                else if(b.board[i][j].piece == Bishop) std::cout << 'B';
+                else if(b.board[i][j].piece == Rook) std::cout << 'R';
+                else if(b.board[i][j].piece == Queen) std::cout << 'Q';
+                else if(b.board[i][j].piece == King) std::cout << 'K';
+                std::cout << ' ';
+            }
+        }
+        std::cout << std::endl;
+    }
+}
+
+void make_move(Board& b, int start_row, int start_col, int end_row, int end_col, int turn){
+    if(b.board[start_row][start_col].piece != Empty && b.board[start_row][start_col].color != 0){
+        std::vector<Move> moves = generate_moves(b, turn);
+        for(int i = 0; i < moves.size() ; i++){
+            if(start_row == moves[i].start_row && start_col == moves[i].start_col && end_row == moves[i].end_row && end_col == moves[i].end_col){
+                b.board[end_row][end_col].piece = b.board[start_row][start_col].piece;
+                b.board[end_row][end_col].color = b.board[start_row][start_col].color;
+                b.board[start_row][start_col].piece = Empty;
+                b.board[start_row][start_col].color = 0;
+            }
+        }
+    }
+}
 
 int main(){
-
+    Board b;
+    char end_game;
+    int start_row, start_col, end_row, end_col;
+    print_board(b);
+    int turn = White;
+    while(end_game != 'y'){
+        std::cout << "square coordinate" << std::endl;
+        std::cout << "start row: ";
+        std::cin >> start_row;
+        std::cout << "start col: ";
+        std::cin >> start_col;
+        std::cout << "end row: ";
+        std::cin >> end_row;
+        std::cout << "end col: ";
+        std::cin >> end_col;
+        make_move(b, start_row, start_col, end_row, end_col, turn);
+        print_board(b);
+        turn = -turn;
+        std::cout << "End game?: ";
+        std::cin >> end_game;
+    }
 }
