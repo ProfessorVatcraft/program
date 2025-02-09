@@ -12,6 +12,9 @@ const int Empty = 0;
 const int White = 1;
 const int Black = -1;
 
+bool castling_kingside_white = true, castling_queenside_white = true;
+bool castling_kingside_black = true, castling_queenside_black = true;
+
 int en_passant[2] = {-1, -1};
 
 struct Piece{
@@ -27,8 +30,39 @@ struct Board{
                 board[i][j] = {Empty, 0};
             }
         }
-        board[6][7] = {Pawn, Black};
-        board[1][1] = {Pawn, White};
+        board[0][0] = {Rook, Black};
+        board[0][1] = {Knight, Black};
+        board[0][2] = {Bishop, Black};
+        board[0][3] = {Queen, Black};
+        board[0][4] = {King, Black};
+        board[0][5] = {Bishop, Black};
+        board[0][6] = {Knight, Black};
+        board[0][7] = {Rook, Black};
+        board[1][0] = {Pawn, Black};
+        board[1][1] = {Pawn, Black};
+        board[1][2] = {Pawn, Black};
+        board[1][3] = {Pawn, Black};
+        board[1][4] = {Pawn, Black};
+        board[1][5] = {Pawn, Black};
+        board[1][6] = {Pawn, Black};
+        board[1][7] = {Pawn, Black};
+
+        board[6][0] = {Pawn, White};
+        board[6][1] = {Pawn, White};
+        board[6][2] = {Pawn, White};
+        board[6][3] = {Pawn, White};
+        board[6][4] = {Pawn, White};
+        board[6][5] = {Pawn, White};
+        board[6][6] = {Pawn, White};
+        board[6][7] = {Pawn, White};
+        board[7][0] = {Rook, White};
+        board[7][1] = {Knight, White};
+        board[7][2] = {Bishop, White};
+        board[7][3] = {Queen, White};
+        board[7][4] = {King, White};
+        board[7][5] = {Bishop, White};
+        board[7][6] = {Knight, White};
+        board[7][7] = {Rook, White};
 
     }
 };
@@ -54,8 +88,6 @@ std::vector<Move> generate_pawn_moves(Board& b, int start_row, int start_col, in
             int two_square = end_row + direction;
             if(b.board[two_square][start_col].piece == Empty){
                 pawn_moves.push_back({start_row, start_col, two_square, start_col});
-                en_passant[0] = end_row;
-                en_passant[1] = start_col;
             }
         }
     }
@@ -69,7 +101,14 @@ std::vector<Move> generate_pawn_moves(Board& b, int start_row, int start_col, in
         }
     }
 
-    if()
+    if (en_passant[0] != -1){
+        int en_passant_row = en_passant[0];
+        int en_passant_col = en_passant[1];
+        int required_row = en_passant_row - direction;
+        if(start_row == required_row && (start_col == en_passant_col - 1 || start_col == en_passant_col + 1)){
+            pawn_moves.push_back({start_row, start_col, en_passant_row, en_passant_col});
+        }
+    }
     return pawn_moves;
 }
 
@@ -164,6 +203,23 @@ std::vector<Move> generate_king_moves(Board& b, int start_row, int start_col, in
             }
         }
     }
+
+    if(turn == White){
+        if(castling_kingside_white == true && b.board[7][5].piece == Empty && b.board[7][6].piece == Empty){
+            king_moves.push_back({7, 4, 7, 6});
+        }
+        if(castling_queenside_white == true && b.board[7][3].piece == Empty && b.board[7][2].piece == Empty && b.board[7][1].piece == Empty){
+            king_moves.push_back({7, 4, 7, 2});
+        }
+    }
+    else if(turn == Black){
+        if(castling_kingside_black == true && b.board[0][5].piece == Empty && b.board[0][6].piece == Empty){
+            king_moves.push_back({0, 4, 0, 6});
+        }
+        if(castling_queenside_black == true && b.board[0][3].piece == Empty && b.board[0][2].piece == Empty && b.board[0][1].piece == Empty){
+            king_moves.push_back({0, 4, 0, 2});
+        }
+    }
     return king_moves;
 }
 
@@ -233,24 +289,86 @@ void make_move(Board& b, int start_row, int start_col, int end_row, int end_col,
     if(b.board[start_row][start_col].piece != Empty && b.board[start_row][start_col].color != 0){
         std::vector<Move> moves = generate_moves(b, turn);
         for(int i = 0; i < moves.size() ; i++){
-            if(start_row == moves[i].start_row && start_col == moves[i].start_col && end_row == moves[i].end_row && end_col == moves[i].end_col){
-                b.board[end_row][end_col].piece = b.board[start_row][start_col].piece;
-                b.board[end_row][end_col].color = b.board[start_row][start_col].color;
-                b.board[start_row][start_col].piece = Empty;
-                b.board[start_row][start_col].color = 0;
 
-                if(b.board[end_row][end_col].piece == Pawn && (end_row == 0 || end_row == 7)){
-                    int promoted_piece;
-                    std::cout << "Promote to Queen(9), Knight(3), Rook(5), Bishop(4): ";
-                    std::cin >> promoted_piece;
-                    if(promoted_piece == Knight || promoted_piece == Rook || promoted_piece == Bishop){
-                        b.board[end_row][end_col].piece = promoted_piece;
+            if(start_row == moves[i].start_row && start_col == moves[i].start_col && end_row == moves[i].end_row && end_col == moves[i].end_col){
+                b.board[end_row][end_col] = b.board[start_row][start_col];
+                b.board[start_row][start_col] = {Empty, 0};
+
+                bool is_en_passant = false;
+
+                if(b.board[end_row][end_col].piece == Pawn){
+                    if(end_row == 0 || end_row == 7){
+                        int promoted_piece;
+                        std::cout << "Promote to Queen(9), Knight(3), Rook(5), Bishop(4): ";
+                        std::cin >> promoted_piece;
+                        if(promoted_piece == Knight || promoted_piece == Rook || promoted_piece == Bishop){
+                            b.board[end_row][end_col].piece = promoted_piece;
+                        }
+                        else{
+                            b.board[end_row][end_col].piece = Queen;
+                        }
                     }
-                    else{
-                        b.board[end_row][end_col].piece = Queen;
+                    else if((start_row == 1 && end_row == 3) || (start_row == 6 && end_row == 4)){
+                        int en_passant_direction = (b.board[end_row][end_col].color == White) ? 1 : -1;
+                        en_passant[0] = end_row + en_passant_direction;
+                        en_passant[1] = start_col;
+                        is_en_passant = true;
+                    }
+                    else if(end_row == en_passant[0] && end_col == en_passant[1]){
+                        int en_passant_row = end_row + ((b.board[end_row][end_col].color == White) ? 1 : -1);
+                        b.board[en_passant_row][end_col] = {Empty, 0};
                     }
                 }
 
+                if(b.board[end_row][end_col].piece == Rook && b.board[end_row][end_col].color == White){
+                    if(start_row == 7 && start_col == 7){
+                        castling_kingside_white = false;
+                    }
+                    else if(start_row == 7 && start_col == 0){
+                        castling_queenside_white = false;
+                    }
+                }
+                else if(b.board[end_row][end_col].piece == Rook && b.board[end_row][end_col].color == Black){
+                    if(start_row == 0 && start_col == 7){
+                        castling_kingside_black = false;
+                    }
+                    else if(start_row == 0 && start_col == 0){
+                        castling_queenside_black = false;
+                    }
+                }
+                else if(b.board[end_row][end_col].piece == King && b.board[end_row][end_col].color == White){
+                    if(start_row == 7 && start_col == 4){
+                        if(end_row == 7 && end_col == 6){
+                            b.board[7][5] = b.board[7][7];
+                            b.board[7][7] = {Empty, 0};
+                        }
+                        else if(end_row == 7 && end_col == 2){
+                            b.board[7][3] = b.board[7][0];
+                            b.board[7][0] = {Empty, 0};
+                        }
+                    }
+                    castling_kingside_white = false;
+                    castling_queenside_white = false;
+                }
+                else if(b.board[end_row][end_col].piece == King && b.board[end_row][end_col].color == Black){
+                    if(start_row == 0 && start_col == 4){
+                        if(end_row == 0 && end_col == 6){
+                            b.board[0][5] = b.board[0][7];
+                            b.board[0][7] = {Empty, 0};
+                        }
+                        else if(end_row == 0 && end_col == 2){
+                            b.board[0][3] = b.board[0][0];
+                            b.board[0][0] = {Empty, 0};
+                        }
+                    }
+                    castling_kingside_black = false;
+                    castling_queenside_black = false;
+                }
+
+                if(is_en_passant == false){
+                    en_passant[0] = -1;
+                    en_passant[1] = -1;
+                }
 
                 break;
             }
@@ -260,11 +378,11 @@ void make_move(Board& b, int start_row, int start_col, int end_row, int end_col,
 
 int main(){
     Board b;
-    char end_game;
     int start_row, start_col, end_row, end_col;
     print_board(b);
     int turn = White;
-    while(end_game != 'y'){
+
+    while(turn == White || turn == Black){
         std::cout << "square coordinate" << std::endl;
         std::cout << "start row: ";
         std::cin >> start_row;
@@ -276,8 +394,7 @@ int main(){
         std::cin >> end_col;
         make_move(b, start_row, start_col, end_row, end_col, turn);
         print_board(b);
-        turn = -turn;
-        std::cout << "End game?: ";
-        std::cin >> end_game;
+        std::cout << "Turn: ";
+        std::cin >> turn;
     }
 }
