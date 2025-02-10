@@ -1,0 +1,57 @@
+# depslib dependency file v1.0
+1738899248 source:d:\minecraft projects\muce\program\main.cpp
+	<iostream>
+	<vector>
+
+1739195581 source:d:\minecraft projects\mrce\program\main.cpp
+	<iostream>
+	<vector>
+	"Piece_values.h"
+	"Castling_checks.h"
+	"Board.h"
+	"Piece.h"
+	"En_passant_check.h"
+	"Move.h"
+	"Print_board.h"
+	"Generate_pawn_moves.h"
+
+1739181040 d:\minecraft projects\mrce\program\piece_values.h
+
+1739181040 d:\minecraft projects\mrce\program\castling_checks.h
+
+1739181038 d:\minecraft projects\mrce\program\board.h
+	"Piece.h"
+
+1739181818 d:\minecraft projects\mrce\program\piece.h
+	"Piece_values.h"
+
+1739181040 d:\minecraft projects\mrce\program\en_passant_check.h
+
+1739181187 d:\minecraft projects\mrce\program\move.h
+
+1739181651 d:\minecraft projects\mrce\program\print_board.h
+	"Board.h"
+	"Piece.h"
+
+1739181647 source:d:\minecraft projects\mrce\program\print_board.cpp
+	<iostream>
+	<vector>
+	"Print_board.h"
+	"Board.h"
+	"Piece.h"
+
+1739196010 source:d:\minecraft projects\mrce\program\generate_pawn_moves.cpp
+	<iostream>
+	<vector>
+	"Generate_pawn_moves.h"
+	"Board.h"
+	"Piece.h"
+	"Move.h"
+
+1739195923 d:\minecraft projects\mrce\program\generate_pawn_moves.h
+	<vector>
+	"Board.h"
+	"Piece.h"
+	"En_passant_check.h"
+	"Move.h"
+
